@@ -1,6 +1,7 @@
-mod handler;
+mod handlers;
+
 use dotenv::dotenv;
-use handler::Handler;
+use handlers::Handler;
 use serenity::prelude::*;
 
 #[tokio::main]

@@ -1,0 +1,14 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:latest
+    restart: always
+    environment:
+      POSTGRES_USER: gym-discord
+      POSTGRES_PASSWORD: 123
+      POSTGRES_DB: gym-discord
+    ports:
+      - "25432:5432"
+    volumes:
+      - ./lib/discord.db:/var/lib/postgresql/data
