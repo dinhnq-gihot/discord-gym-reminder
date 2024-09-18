@@ -1,4 +1,6 @@
+mod db;
 mod handlers;
+mod schema;
 
 use dotenv::dotenv;
 use handlers::Handler;
