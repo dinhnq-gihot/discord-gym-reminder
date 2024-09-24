@@ -1,11 +1,11 @@
 - day: Monday
-  start_time: 6:00AM
-  exercises:
-    - Squats
-    - Bench Press
-    - Deadlifts
+  start_time: 06:00:00
+  musculatures:
+    - NGỰC TRÊN
+    - ĐẨY NGỰC GIỮA
+    - ÉP NGỰC DƯỚI
 - day: Tuesday
-  start_time: 6:00AM
-  exercises:
-    - Running
-    - Cycling
+  start_time: 06:00:00
+  musculatures:
+    - LƯNG XÔ
+    - LƯNG GIỮA

@@ -1,8 +1,8 @@
 -- Your SQL goes here
 CREATE TABLE exercises (
-    id SERIAL PRIMARY KEY,          -- Auto-incrementing ID
-    name VARCHAR(255) NOT NULL,     -- Name of the exercise
-    impact VARCHAR(255) NOT NULL,             -- Impact type (e.g., low, high)
+    id SERIAL PRIMARY KEY,              -- Auto-incrementing ID
+    name VARCHAR(255) NOT NULL,         -- Name of the exercise
+    impact VARCHAR(255) NOT NULL,       -- Impact type (e.g., low, high)
     level VARCHAR(255) NOT NULL,              -- Difficulty level (e.g., beginner, advanced)
     description TEXT NOT NULL,               -- Detailed description of the exercise
     video TEXT[] NOT NULL,             -- Link to the exercise video

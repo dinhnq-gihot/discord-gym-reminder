@@ -2,6 +2,8 @@ mod db;
 mod handlers;
 mod schema;
 
+use std::sync::Arc;
+
 use dotenv::dotenv;
 use handlers::Handler;
 use serenity::prelude::*;
@@ -15,8 +17,15 @@ async fn main() {
         | GatewayIntents::DIRECT_MESSAGES
         | GatewayIntents::MESSAGE_CONTENT;
 
+    let db = db::Database::new(
+        std::env::var("DATABASE_URL")
+            .expect("Cannot get database url!")
+            .as_str(),
+    )
+    .await;
+
     let mut client = Client::builder(token, intents)
-        .event_handler(Handler)
+        .event_handler(Handler { db: Arc::new(db) })
         .await
         .expect("Error createing client");
 

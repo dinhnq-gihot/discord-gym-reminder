@@ -1,20 +1,27 @@
 pub mod file_upload;
 pub mod types;
+mod utils;
 
-use file_upload::handle_file_upload;
-use serenity::all::{Command, Interaction, MessageBuilder};
+use std::sync::Arc;
+
+use file_upload::handler_schedule;
+use serenity::all::MessageBuilder;
 use serenity::async_trait;
 use serenity::{
     model::{channel::Message, gateway::Ready},
     prelude::*,
 };
 
-pub struct Handler;
+use crate::db::Database;
+
+pub struct Handler {
+    pub db: Arc<Database>,
+}
 
 #[async_trait]
 impl EventHandler for Handler {
     async fn message(&self, ctx: Context, msg: Message) {
-        if msg.content == "!intro" {
+        if msg.content == "!ping" {
             let channel = match msg.channel_id.to_channel(&ctx).await {
                 Ok(channel) => channel,
                 Err(why) => {
@@ -23,10 +30,12 @@ impl EventHandler for Handler {
                     return;
                 }
             };
+            let user_id = msg.author.id;
+            println!("User ID: {}", user_id);
 
             let response = MessageBuilder::new()
                 .push("User ")
-                .push_bold_safe(&msg.author.name)
+                .mention(&user_id)
                 .push(" used the 'ping' command in the ")
                 .mention(&channel)
                 .push(" channel")
@@ -45,8 +54,8 @@ impl EventHandler for Handler {
                     println!("Error sending message: {why:?}");
                 }
 
-                if let Err(e) = handle_file_upload(&ctx, &msg).await {
-                    println!("Error handle file upload: {e:?}");
+                if let Err(why) = handler_schedule(&ctx, &msg, &self.db).await {
+                    println!("Error handle schedule: {why:?}");
                 }
             } else {
                 if let Err(why) = msg

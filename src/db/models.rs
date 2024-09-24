@@ -1,5 +1,4 @@
 // src/models.rs
-use crate::schema::{exercises, musculature};
 use diesel::prelude::*;
 use diesel::{Insertable, Queryable};
 
@@ -8,6 +7,7 @@ use diesel::{Insertable, Queryable};
 )]
 #[diesel(table_name = crate::schema::exercises)]
 #[diesel(belongs_to(Musculature, foreign_key = musculature_id))]
+#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Exercise {
     pub id: i32,
     pub name: String,
@@ -22,8 +22,30 @@ pub struct Exercise {
 
 #[derive(Debug, Identifiable, AsChangeset, Queryable, Selectable, PartialEq, Clone)]
 #[diesel(table_name = crate::schema::musculature)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Musculature {
     pub id: i32,
     pub name: String,
     pub note: Option<String>, // Adjusted for Nullable<Text>
+}
+
+#[derive(Debug, Identifiable, AsChangeset, Queryable, Selectable, PartialEq, Clone)]
+#[diesel(table_name = crate::schema::schedules)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct Schedule {
+    pub id: i32,
+    pub user_id: String,                   // Adjust type if necessary
+    pub day: String,                       // Adjust type if necessary
+    pub start_time: chrono::NaiveTime,     // Use chrono for time
+    pub musculatures: Vec<Option<String>>, // Adjust type if necessary
+}
+
+#[derive(Debug, Insertable)]
+#[diesel(table_name = crate::schema::schedules)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct NewSchedule<'a> {
+    pub user_id: &'a str,                  // Adjust type if necessary
+    pub day: &'a str,                      // Adjust type if necessary
+    pub start_time: &'a chrono::NaiveTime, // Use chrono for time
+    pub musculatures: &'a Vec<String>,     // Adjust type if necessary
 }
