@@ -34,7 +34,7 @@ impl Debug for Database {
 
 impl Database {
     pub async fn new(url: &str) -> Self {
-        let manager = AsyncDieselConnectionManager::<AsyncPgConnection>::new(url.clone());
+        let manager = AsyncDieselConnectionManager::<AsyncPgConnection>::new(url);
         let pool = Pool::builder()
             .test_on_check_out(true)
             .build(manager)

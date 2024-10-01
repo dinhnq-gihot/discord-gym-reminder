@@ -91,12 +91,14 @@ impl ScheduleRepository {
     pub async fn insert(
         &self,
         user_id: String,
+        channel_id: String,
         day: String,
         start_time: NaiveTime,
         musculatures: Vec<String>,
     ) -> Result<Schedule, Error> {
         let new_schedule = NewSchedule {
             user_id: &user_id,
+            channel_id: &channel_id,
             day: &day,
             start_time: &start_time,
             musculatures: &musculatures,
@@ -131,6 +133,20 @@ impl ScheduleRepository {
             .set(&schedule)
             .returning(Schedule::as_returning())
             .get_result(&mut conn)
+            .await
+    }
+
+    pub async fn get_upcoming_by_day_in_time(
+        &self,
+        day: String,
+        time: NaiveTime,
+    ) -> Result<Vec<Schedule>, Error> {
+        let mut conn = self.db.get_connection().await;
+        schedules::table
+            .filter(schedules::day.eq(day))
+            .filter(schedules::start_time.gt(time))
+            .select(Schedule::as_select())
+            .load(&mut conn)
             .await
     }
 
@@ -209,12 +225,19 @@ mod tests {
         };
 
         let user_id = "user123".to_string();
+        let channel_id = "channel123".to_string();
         let day = "2023-10-01".to_string();
         let start_time = NaiveTime::from_hms_opt(9, 0, 0).unwrap();
         let musculatures = vec!["NGỰC TRÊN".to_string(), "ĐẨY NGỰC GIỮA".to_string()];
 
         let result = repo
-            .insert(user_id.clone(), day.clone(), start_time, musculatures)
+            .insert(
+                user_id.clone(),
+                channel_id.clone(),
+                day.clone(),
+                start_time,
+                musculatures,
+            )
             .await;
         println!("{result:#?}");
 

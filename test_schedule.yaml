@@ -1,11 +1,16 @@
-- day: Monday
+- day: Mon
   start_time: 06:00:00
   musculatures:
     - NGỰC TRÊN
     - ĐẨY NGỰC GIỮA
     - ÉP NGỰC DƯỚI
-- day: Tuesday
-  start_time: 06:00:00
+- day: Tue
+  start_time: 17:00:00
+  musculatures:
+    - LƯNG XÔ
+    - LƯNG GIỮA
+- day: Thu
+  start_time: 14:40:00
   musculatures:
     - LƯNG XÔ
     - LƯNG GIỮA

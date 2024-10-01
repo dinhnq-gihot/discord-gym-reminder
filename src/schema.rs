@@ -33,6 +33,8 @@ diesel::table! {
         id -> Int4,
         #[max_length = 50]
         user_id -> Varchar,
+        #[max_length = 50]
+        channel_id -> Varchar,
         #[max_length = 20]
         day -> Varchar,
         start_time -> Time,
@@ -42,4 +44,8 @@ diesel::table! {
 
 diesel::joinable!(exercises -> musculature (musculature_id));
 
-diesel::allow_tables_to_appear_in_same_query!(exercises, musculature, schedules,);
+diesel::allow_tables_to_appear_in_same_query!(
+    exercises,
+    musculature,
+    schedules,
+);
