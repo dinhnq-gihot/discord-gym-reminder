@@ -1,11 +1,11 @@
 -- Your SQL goes here
-CREATE TABLE musculature (
+CREATE TABLE musculatures (
     id SERIAL PRIMARY KEY,          -- Auto-incrementing ID
     name VARCHAR(255) NOT NULL,
     note TEXT
 );
 
-INSERT INTO musculature (name, note) VALUES
+INSERT INTO musculatures (name, note) VALUES
 ('NGỰC TRÊN', 'Chỉ nên tập 1 biến thể'), --1
 ('ĐẨY NGỰC GIỮA', 'Chỉ nên tập 1 biến thể'), --2
 ('ÉP NGỰC DƯỚI', 'Chỉ nên tập 1 biến thể'), --3

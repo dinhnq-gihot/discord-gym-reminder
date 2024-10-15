@@ -1,9 +1,6 @@
 use anyhow::Result;
 use chrono::{Datelike, Utc};
-use serenity::{
-    all::{Context, Http, Message, MessageBuilder},
-    model::user,
-};
+use serenity::all::{Context, Http, Message, MessageBuilder};
 use std::{
     fs::File,
     io::{Read, Write},
@@ -11,7 +8,6 @@ use std::{
 };
 
 use crate::db::{
-    models::Exercise,
     repositories::{ExerciseRepository, MusculatureRepository, ScheduleRepository},
     Database,
 };
@@ -22,14 +18,14 @@ use super::{types::Schedule, utils::parse_start_time};
 async fn handle_file_upload(ctx: &Context, msg: &Message) -> Result<Vec<Schedule>> {
     for attachment in &msg.attachments {
         let file_url = &attachment.url;
-        let file_name = &attachment.filename;
 
         // Download the YAML file
         let uuid = uuid::Uuid::new_v4().to_string();
-        download_file(file_url, &format!("assets/uploads/{uuid}-{file_name}")).await?;
+        let file_name = format!("assets/uploads/{uuid}-{}", attachment.filename);
+        download_file(file_url, &file_name).await?;
 
         // Deserialize the YAML file
-        let data = read_yaml_file(file_name).await?;
+        let data = read_yaml_file(&file_name).await?;
 
         // Acknowledge the upload and print the deserialized data
         msg.channel_id
@@ -90,24 +86,32 @@ pub async fn handler_schedule(ctx: &Context, msg: &Message, db: &Arc<Database>) 
     Ok(())
 }
 
-pub async fn get_all_exercises_in_schedule(
+pub async fn message_all_exercises_in_musculature(
     db: Arc<Database>,
-    musculatures: Vec<String>,
-) -> Result<Vec<Exercise>> {
+    musculature: String,
+    stt: u32,
+) -> Result<String> {
     let mus_repo = MusculatureRepository {
         db: Arc::clone(&db),
     };
     let exercise_repo = ExerciseRepository {
         db: Arc::clone(&db),
     };
-    let mut ret = Vec::new();
-    for m in musculatures.into_iter() {
-        let mus = mus_repo.get_by_name(&m).await?;
-        let mut exers = exercise_repo.get_by_musculature(mus.id).await?;
-        ret.append(&mut exers);
+
+    let mus = mus_repo.get_by_name(&musculature).await?;
+    let exers = exercise_repo.get_by_musculature(mus.id).await?;
+
+    let mut msg = String::from(format!(
+        "-----------------------------------------------------\n\
+        # {stt}. {}\n",
+        mus.name
+    ));
+
+    for e in exers.into_iter() {
+        msg += &e.format_for_discord();
     }
 
-    Ok(ret)
+    Ok(msg)
 }
 
 pub async fn reminder(http: Arc<Http>, db: Arc<Database>) -> Result<()> {
@@ -136,24 +140,24 @@ pub async fn reminder(http: Arc<Http>, db: Arc<Database>) -> Result<()> {
 
         let message = MessageBuilder::new()
             .push(format!(
-                "Tới giờ đi tập của thloz <@{}> lúc {}",
+                "Tới giờ đi tập của thloz <@{}> lúc ***{}***",
                 user_id, time
             ))
             .build();
 
         let _ = channel_id.say(&http, &message).await?;
 
-        let exers = get_all_exercises_in_schedule(
-            Arc::clone(&db),
-            s.musculatures
-                .into_iter()
-                .filter_map(|m| m)
-                .collect::<Vec<String>>(),
-        )
-        .await?;
-
-        for e in exers.into_iter() {
-            if let Err(why) = channel_id.say(&http, e.format_for_discord()).await {
+        let mut stt = 0;
+        for m in s
+            .musculatures
+            .into_iter()
+            .filter_map(|m| m)
+            .collect::<Vec<String>>()
+            .into_iter()
+        {
+            stt += 1;
+            let msg = message_all_exercises_in_musculature(Arc::clone(&db), m, stt).await?;
+            if let Err(why) = channel_id.say(&http, msg).await {
                 println!("Error sending message: {:?}", why);
             }
         }

@@ -20,7 +20,7 @@ diesel::table! {
 }
 
 diesel::table! {
-    musculature (id) {
+    musculatures (id) {
         id -> Int4,
         #[max_length = 255]
         name -> Varchar,
@@ -31,21 +31,40 @@ diesel::table! {
 diesel::table! {
     schedules (id) {
         id -> Int4,
-        #[max_length = 50]
         user_id -> Varchar,
         #[max_length = 50]
         channel_id -> Varchar,
         #[max_length = 20]
         day -> Varchar,
         start_time -> Time,
-        musculatures -> Array<Nullable<Text>>,
     }
 }
 
-diesel::joinable!(exercises -> musculature (musculature_id));
+diesel::table! {
+    schedules_musculatures (schedule_id, musculature_id) {
+        schedule_id -> Int4,
+        musculature_id -> Int4,
+    }
+}
+
+diesel::table! {
+    users (id) {
+        id -> Varchar,
+        name -> Nullable<Varchar>,
+        point -> Int4,
+        level -> Int4,
+    }
+}
+
+diesel::joinable!(exercises -> musculatures (musculature_id));
+diesel::joinable!(schedules -> users (user_id));
+diesel::joinable!(schedules_musculatures -> musculatures (musculature_id));
+diesel::joinable!(schedules_musculatures -> schedules (schedule_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     exercises,
-    musculature,
+    musculatures,
     schedules,
+    schedules_musculatures,
+    users,
 );

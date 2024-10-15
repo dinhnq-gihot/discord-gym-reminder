@@ -8,7 +8,7 @@ CREATE TABLE exercises (
     video TEXT[] NOT NULL,             -- Link to the exercise video
     male_weight VARCHAR(255) NOT NULL,        -- Suggested male weight range
     female_weight VARCHAR(255) NOT NULL,       -- Suggested female weight range
-    musculature_id INTEGER NOT NULL REFERENCES musculature(id)
+    musculature_id INTEGER NOT NULL REFERENCES musculatures(id)
 );
 
 INSERT INTO exercises (name, impact, level, description, video, male_weight, female_weight, musculature_id)
