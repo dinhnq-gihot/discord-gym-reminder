@@ -1,18 +1,29 @@
+pub mod dto;
 pub mod file_upload;
-pub mod types;
 mod utils;
 
-use std::sync::Arc;
-
-use file_upload::handler_schedule;
-use serenity::all::MessageBuilder;
-use serenity::async_trait;
-use serenity::{
-    model::{channel::Message, gateway::Ready},
-    prelude::*,
+use {
+    crate::db::Database,
+    file_upload::handler_schedule,
+    log::{
+        debug,
+        info,
+        warn,
+    },
+    serenity::{
+        all::{
+            Member,
+            MessageBuilder,
+        },
+        async_trait,
+        model::{
+            channel::Message,
+            gateway::Ready,
+        },
+        prelude::*,
+    },
+    std::sync::Arc,
 };
-
-use crate::db::Database;
 
 pub struct Handler {
     pub db: Arc<Database>,
@@ -81,7 +92,35 @@ impl EventHandler for Handler {
     //     }
     // }
 
-    async fn ready(&self, _: Context, ready: Ready) {
+    async fn ready(&self, ctx: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
+
+        // Fetch all guilds the bot is in
+        let guilds = ctx.cache.guilds();
+
+        for guild_id in guilds {
+            if let Ok(guild) = guild_id.to_partial_guild(&ctx.http).await {
+                info!("Processing guild: {}", guild.name);
+
+                // Fetch all members of the guild
+                if let Ok(members) = guild.members(&ctx.http, None, None).await {
+                    let human_members: Vec<&Member> =
+                        members.iter().filter(|member| !member.user.bot).collect();
+
+                    debug!(
+                        "Guild '{}' has {} human members:",
+                        guild.name,
+                        human_members.len()
+                    );
+                    for member in human_members {
+                        debug!("- {} (ID: {})", member.user.name, member.user.id);
+                    }
+                } else {
+                    warn!("Failed to fetch members for guild: {}", guild.name);
+                }
+            } else {
+                warn!("Failed to fetch guild info for ID: {}", guild_id);
+            }
+        }
     }
 }

@@ -4,17 +4,23 @@ pub mod repositories;
 use {
     diesel_async::{
         pooled_connection::{
-            bb8::{Pool, PooledConnection},
+            bb8::{
+                Pool,
+                PooledConnection,
+            },
             AsyncDieselConnectionManager,
         },
         AsyncPgConnection,
     },
-    diesel_async_migrations::{embed_migrations, EmbeddedMigrations},
+    diesel_async_migrations::{
+        embed_migrations,
+        EmbeddedMigrations,
+    },
     once_cell::sync::Lazy,
     std::fmt::Debug,
 };
 
-pub static MIGRATIONS: Lazy<EmbeddedMigrations> = Lazy::new(|| embed_migrations!("./migrations"));
+pub static MIGRATIONS: Lazy<EmbeddedMigrations> = Lazy::new(|| embed_migrations!("migrations"));
 
 #[derive(Clone)]
 pub struct Database {

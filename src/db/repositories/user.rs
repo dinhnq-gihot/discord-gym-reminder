@@ -1,17 +1,26 @@
-use super::DbResult;
-use crate::{
-    db::{
-        models::user::{NewUser, User},
-        Database,
+use {
+    super::DbResult,
+    crate::{
+        db::{
+            models::user::{
+                NewUser,
+                User,
+            },
+            Database,
+        },
+        schema::users,
     },
-    schema::users,
+    diesel::{
+        update,
+        QueryDsl,
+        SelectableHelper,
+    },
+    diesel_async::RunQueryDsl,
+    std::sync::Arc,
 };
-use diesel::{QueryDsl, SelectableHelper};
-use diesel_async::RunQueryDsl;
-use std::sync::Arc;
 
 pub struct UserRepository {
-    db: Arc<Database>,
+    pub db: Arc<Database>,
 }
 
 impl UserRepository {
@@ -34,7 +43,7 @@ impl UserRepository {
         users::table.find(user_id).first(&mut conn).await
     }
 
-    pub async fn find_all(&self) -> DbResult<Vec<User>> {
+    pub async fn get_all(&self) -> DbResult<Vec<User>> {
         let mut conn = self.db.get_connection().await;
         users::table.load::<User>(&mut conn).await
     }
@@ -47,15 +56,26 @@ impl UserRepository {
         level: Option<i32>,
     ) -> DbResult<User> {
         let mut conn = self.db.get_connection().await;
-        let user = users::table.find(user_id).first(&mut conn).await?;
+        let mut user: User = users::table
+            .find(&user_id)
+            .select(User::as_select())
+            .first(&mut conn)
+            .await?;
 
-        diesel::update(users::table.find(&user.id))
+        if let Some(name) = name {
+            user.name = Some(name);
+        }
+        if let Some(point) = point {
+            user.point = point;
+        }
+        if let Some(level) = level {
+            user.level = level;
+        }
+
+        update(users::table.find(user_id))
             .set(user)
+            .returning(User::as_returning())
             .get_result(&mut conn)
-    }
-
-    pub fn delete(pool: &DbPool, user_id: &str) -> QueryResult<usize> {
-        let mut conn = pool.get().expect("Failed to get DB connection");
-        diesel::delete(users::table.find(user_id)).execute(&mut conn)
+            .await
     }
 }

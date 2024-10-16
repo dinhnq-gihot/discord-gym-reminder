@@ -1,21 +1,40 @@
-use anyhow::Result;
-use chrono::{Datelike, Utc};
-use serenity::all::{Context, Http, Message, MessageBuilder};
-use std::{
-    fs::File,
-    io::{Read, Write},
-    sync::Arc,
+use {
+    super::{
+        dto::Schedule as ScheduleDTO,
+        utils::parse_start_time,
+    },
+    crate::db::{
+        repositories::{
+            exercise::ExerciseRepository,
+            musculature::MusculatureRepository,
+            schedule::ScheduleRepository,
+            user::UserRepository,
+        },
+        Database,
+    },
+    anyhow::Result,
+    chrono::{
+        Datelike,
+        Utc,
+    },
+    serenity::all::{
+        Context,
+        Http,
+        Message,
+        MessageBuilder,
+    },
+    std::{
+        fs::File,
+        io::{
+            Read,
+            Write,
+        },
+        sync::Arc,
+    },
 };
-
-use crate::db::{
-    repositories::{ExerciseRepository, MusculatureRepository, ScheduleRepository},
-    Database,
-};
-
-use super::{types::Schedule, utils::parse_start_time};
 
 // New function to handle file uploads
-async fn handle_file_upload(ctx: &Context, msg: &Message) -> Result<Vec<Schedule>> {
+async fn handle_file_upload(ctx: &Context, msg: &Message) -> Result<Vec<ScheduleDTO>> {
     for attachment in &msg.attachments {
         let file_url = &attachment.url;
 
@@ -54,29 +73,50 @@ async fn download_file(url: &str, file_name: &str) -> Result<()> {
 }
 
 // Function to read and deserialize the YAML file
-async fn read_yaml_file(file_name: &str) -> Result<Vec<Schedule>> {
+async fn read_yaml_file(file_name: &str) -> Result<Vec<ScheduleDTO>> {
     let mut file = File::open(file_name)?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
 
-    let schedules: Vec<Schedule> = serde_yaml::from_str(&contents)?;
+    let schedules: Vec<ScheduleDTO> = serde_yaml::from_str(&contents)?;
     Ok(schedules)
 }
 
 pub async fn handler_schedule(ctx: &Context, msg: &Message, db: &Arc<Database>) -> Result<()> {
     let schedules = handle_file_upload(ctx, msg).await?;
-    let repo = ScheduleRepository { db: Arc::clone(db) };
+
+    let schedule_repo = ScheduleRepository { db: Arc::clone(db) };
+    let user_repo = UserRepository { db: Arc::clone(db) };
+
     let user_id = msg.author.id.to_string();
     let channel_id = msg.channel_id.to_string();
 
+    match user_repo.create(user_id.clone(), None).await {
+        Ok(user) => {
+            println!("User created: {user:#?}");
+        }
+        Err(db_error) => {
+            match db_error {
+                diesel::result::Error::DatabaseError(
+                    diesel::result::DatabaseErrorKind::UniqueViolation,
+                    _,
+                ) => {
+                    println!("User already exists, continuing...");
+                }
+                _ => {
+                    return Err(db_error.into());
+                }
+            }
+        }
+    }
+
     for schedule in schedules.into_iter() {
-        let a = repo
+        let a = schedule_repo
             .insert(
                 user_id.clone(),
                 channel_id.clone(),
                 schedule.day,
                 parse_start_time(&schedule.start_time).unwrap_or_default(),
-                schedule.musculatures,
             )
             .await?;
 
@@ -102,7 +142,7 @@ pub async fn message_all_exercises_in_musculature(
     let exers = exercise_repo.get_by_musculature(mus.id).await?;
 
     let mut msg = String::from(format!(
-        "-----------------------------------------------------\n\
+        "---------------------------------------------------------------\n\
         # {stt}. {}\n",
         mus.name
     ));
@@ -114,54 +154,54 @@ pub async fn message_all_exercises_in_musculature(
     Ok(msg)
 }
 
-pub async fn reminder(http: Arc<Http>, db: Arc<Database>) -> Result<()> {
-    println!("Reminder scanning...");
-    let schedule_repo = ScheduleRepository {
-        db: Arc::clone(&db),
-    };
+// pub async fn reminder(http: Arc<Http>, db: Arc<Database>) -> Result<()> {
+//     println!("Reminder scanning...");
+//     let schedule_repo = ScheduleRepository {
+//         db: Arc::clone(&db),
+//     };
 
-    let now = Utc::now().time();
-    let current_weekday = Utc::now().naive_utc().date().weekday().to_string();
+//     let now = Utc::now().time();
+//     let current_weekday = Utc::now().naive_utc().date().weekday().to_string();
 
-    let schedules = schedule_repo
-        .get_upcoming_by_day_in_time(current_weekday.clone(), now)
-        .await?;
+//     let schedules = schedule_repo
+//         .get_upcoming_by_day_in_time(current_weekday.clone(), now)
+//         .await?;
 
-    println!("Now: {now:#?}");
-    println!("Current weekday: {}", &current_weekday);
+//     println!("Now: {now:#?}");
+//     println!("Current weekday: {}", &current_weekday);
 
-    println!("{schedules:#?}");
+//     println!("{schedules:#?}");
 
-    for s in schedules.into_iter() {
-        let user_id = s.user_id;
-        let channel_id = s.channel_id.parse::<u64>()?; // Parse as u64
-        let channel_id = serenity::model::id::ChannelId::from(channel_id); // Convert to ChannelId
-        let time = s.start_time.to_string();
+//     for s in schedules.into_iter() {
+//         let user_id = s.user_id;
+//         let channel_id = s.channel_id.parse::<u64>()?; // Parse as u64
+//         let channel_id = serenity::model::id::ChannelId::from(channel_id); // Convert to ChannelId
+//         let time = s.start_time.to_string();
 
-        let message = MessageBuilder::new()
-            .push(format!(
-                "Tới giờ đi tập của thloz <@{}> lúc ***{}***",
-                user_id, time
-            ))
-            .build();
+//         let message = MessageBuilder::new()
+//             .push(format!(
+//                 "Tới giờ đi tập của thloz <@{}> lúc ***{}***",
+//                 user_id, time
+//             ))
+//             .build();
 
-        let _ = channel_id.say(&http, &message).await?;
+//         let _ = channel_id.say(&http, &message).await?;
 
-        let mut stt = 0;
-        for m in s
-            .musculatures
-            .into_iter()
-            .filter_map(|m| m)
-            .collect::<Vec<String>>()
-            .into_iter()
-        {
-            stt += 1;
-            let msg = message_all_exercises_in_musculature(Arc::clone(&db), m, stt).await?;
-            if let Err(why) = channel_id.say(&http, msg).await {
-                println!("Error sending message: {:?}", why);
-            }
-        }
-    }
+//         let mut stt = 0;
+//         for m in s
+//             .musculatures
+//             .into_iter()
+//             .filter_map(|m| m)
+//             .collect::<Vec<String>>()
+//             .into_iter()
+//         {
+//             stt += 1;
+//             let msg = message_all_exercises_in_musculature(Arc::clone(&db), m, stt).await?;
+//             if let Err(why) = channel_id.say(&http, msg).await {
+//                 println!("Error sending message: {:?}", why);
+//             }
+//         }
+//     }
 
-    Ok(())
-}
+//     Ok(())
+// }
